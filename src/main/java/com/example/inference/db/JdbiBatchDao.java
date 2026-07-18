@@ -2,6 +2,7 @@ package com.example.inference.db;
 
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
+import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
@@ -25,19 +26,29 @@ public class JdbiBatchDao implements BatchDao {
 
     @Override
     public void initialize() {
+        System.out.println("[DB] Initializing schema");
         jdbi.useExtension(Dao.class, dao -> dao.createSchema());
     }
 
     @Override
     public String createBatch(List<String> prompts) {
         String batchId = UUID.randomUUID().toString();
+        System.out.println("[DB] Creating batch " + batchId + " with " + prompts.size() + " prompts");
         jdbi.useExtension(Dao.class, dao -> dao.insertBatch(batchId, "IN_PROGRESS", prompts.size()));
+        System.out.println("[DB] Batch inserted: " + batchId);
         return batchId;
     }
 
     @Override
     public BatchRecord getBatch(String batchId) {
-        return jdbi.withExtension(Dao.class, dao -> dao.findById(batchId));
+        System.out.println("[DB] Looking up batch " + batchId);
+        BatchRecord record = jdbi.withExtension(Dao.class, dao -> dao.findById(batchId));
+        if (record == null) {
+            System.out.println("[DB] Batch not found: " + batchId);
+        } else {
+            System.out.println("[DB] Batch found: " + batchId + " status=" + record.getStatus() + " completed=" + record.getCompleted() + " failed=" + record.getFailed());
+        }
+        return record;
     }
 
     @Override
@@ -60,8 +71,9 @@ public class JdbiBatchDao implements BatchDao {
         jdbi.useExtension(Dao.class, dao -> dao.updatePromptResult(batchId, prompt, response, success));
     }
 
+    @RegisterBeanMapper(BatchRecord.class)
     public interface Dao {
-        @SqlUpdate("CREATE TABLE IF NOT EXISTS batches (batch_id VARCHAR(255) PRIMARY KEY, status VARCHAR(50), total_prompts INT, completed INT DEFAULT 0, failed INT DEFAULT 0)")
+        @SqlUpdate("CREATE TABLE IF NOT EXISTS batches (batch_id VARCHAR(255) PRIMARY KEY, status VARCHAR(50), total_prompts INT, completed INT DEFAULT 0, failed INT DEFAULT 0); CREATE TABLE IF NOT EXISTS batch_results (batch_id VARCHAR(255), prompt VARCHAR(1000), response VARCHAR(1000), success BOOLEAN)")
         void createSchema();
 
         @SqlUpdate("INSERT INTO batches(batch_id, status, total_prompts, completed, failed) VALUES (?, ?, ?, 0, 0)")

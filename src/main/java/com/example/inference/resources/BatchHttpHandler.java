@@ -28,23 +28,29 @@ public class BatchHttpHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod();
-        String path = exchange.getRequestURI().getPath();
+        try {
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+            System.out.println("[HTTP] " + method + " " + path);
 
-        if ("POST".equals(method) && "/v1/batches".equals(path)) {
-            handleCreateBatch(exchange);
-            return;
-        }
-
-        if ("GET".equals(method)) {
-            var matcher = BATCH_PATH.matcher(path);
-            if (matcher.matches()) {
-                handleGetBatch(exchange, matcher.group(1));
+            if ("POST".equals(method) && "/v1/batches".equals(path)) {
+                handleCreateBatch(exchange);
                 return;
             }
-        }
 
-        sendJson(exchange, 404, "{\"error\":\"Not found\"}");
+            if ("GET".equals(method)) {
+                var matcher = BATCH_PATH.matcher(path);
+                if (matcher.matches()) {
+                    handleGetBatch(exchange, matcher.group(1));
+                    return;
+                }
+            }
+
+            sendJson(exchange, 404, "{\"error\":\"Not found\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendJson(exchange, 500, "{\"error\":\"Internal server error\"}");
+        }
     }
 
     private void handleCreateBatch(HttpExchange exchange) throws IOException {
