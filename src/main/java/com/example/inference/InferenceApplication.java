@@ -33,7 +33,7 @@ public class InferenceApplication {
         );
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
-        server.createContext("/v1/batches", new BatchHttpHandler(batchDao, processor));
+        server.createContext("/", new BatchHttpHandler(batchDao, processor));
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
         System.out.println("Server started on http://127.0.0.1:8080/");

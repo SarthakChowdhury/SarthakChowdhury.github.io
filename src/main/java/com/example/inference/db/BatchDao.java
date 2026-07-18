@@ -10,4 +10,6 @@ public interface BatchDao {
     void updatePromptResult(String batchId, String prompt, String response, boolean success);
     void incrementCompleted(String batchId);
     void incrementFailed(String batchId);
+    List<BatchRecord> listBatches();
+    List<BatchResultRecord> listBatchResults(String batchId);
 }

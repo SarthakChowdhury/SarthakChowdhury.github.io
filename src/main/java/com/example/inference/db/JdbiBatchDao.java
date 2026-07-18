@@ -71,7 +71,18 @@ public class JdbiBatchDao implements BatchDao {
         jdbi.useExtension(Dao.class, dao -> dao.updatePromptResult(batchId, prompt, response, success));
     }
 
+    @Override
+    public List<BatchRecord> listBatches() {
+        return jdbi.withExtension(Dao.class, Dao::listBatches);
+    }
+
+    @Override
+    public List<BatchResultRecord> listBatchResults(String batchId) {
+        return jdbi.withExtension(Dao.class, dao -> dao.listBatchResults(batchId));
+    }
+
     @RegisterBeanMapper(BatchRecord.class)
+    @RegisterBeanMapper(BatchResultRecord.class)
     public interface Dao {
         @SqlUpdate("CREATE TABLE IF NOT EXISTS batches (batch_id VARCHAR(255) PRIMARY KEY, status VARCHAR(50), total_prompts INT, completed INT DEFAULT 0, failed INT DEFAULT 0); CREATE TABLE IF NOT EXISTS batch_results (batch_id VARCHAR(255), prompt VARCHAR(1000), response VARCHAR(1000), success BOOLEAN)")
         void createSchema();
@@ -93,5 +104,11 @@ public class JdbiBatchDao implements BatchDao {
 
         @SqlUpdate("INSERT INTO batch_results(batch_id, prompt, response, success) VALUES (:batchId, :prompt, :response, :success)")
         void updatePromptResult(@Bind("batchId") String batchId, @Bind("prompt") String prompt, @Bind("response") String response, @Bind("success") boolean success);
+
+        @SqlQuery("SELECT batch_id AS batchId, status, total_prompts AS totalPrompts, completed, failed FROM batches ORDER BY batch_id")
+        List<BatchRecord> listBatches();
+
+        @SqlQuery("SELECT batch_id AS batchId, prompt, response, success FROM batch_results WHERE batch_id = :batchId ORDER BY prompt")
+        List<BatchResultRecord> listBatchResults(@Bind("batchId") String batchId);
     }
 }

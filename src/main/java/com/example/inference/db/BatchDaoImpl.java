@@ -103,4 +103,14 @@ public class BatchDaoImpl implements BatchDao {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public List<BatchRecord> listBatches() {
+        return List.of();
+    }
+
+    @Override
+    public List<BatchResultRecord> listBatchResults(String batchId) {
+        return List.of();
+    }
 }

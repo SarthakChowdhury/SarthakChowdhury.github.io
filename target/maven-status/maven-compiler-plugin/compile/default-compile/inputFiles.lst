@@ -13,6 +13,7 @@
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/db/BatchDao.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/db/BatchDaoImpl.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/db/BatchRecord.java
+/workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/db/BatchResultRecord.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/db/JdbiBatchDao.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/exception/ValidationExceptionMapper.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/model/BatchInferenceRequest.java

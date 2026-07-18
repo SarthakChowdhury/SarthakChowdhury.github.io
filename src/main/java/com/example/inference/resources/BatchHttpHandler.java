@@ -12,6 +12,8 @@ import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class BatchHttpHandler implements HttpHandler {
@@ -33,8 +35,13 @@ public class BatchHttpHandler implements HttpHandler {
             String path = exchange.getRequestURI().getPath();
             System.out.println("[HTTP] " + method + " " + path);
 
-            if ("POST".equals(method) && "/v1/batches".equals(path)) {
+                if ("POST".equals(method) && "/v1/batches".equals(path)) {
                 handleCreateBatch(exchange);
+                return;
+            }
+
+            if ("GET".equals(method) && "/admin/db".equals(path)) {
+                handleAdminDb(exchange);
                 return;
             }
 
@@ -74,6 +81,13 @@ public class BatchHttpHandler implements HttpHandler {
         }
         BatchStatusResponse response = new BatchStatusResponse(record.getBatchId(), record.getStatus(), record.getTotalPrompts(), record.getCompleted(), record.getFailed());
         sendJson(exchange, 200, OBJECT_MAPPER.writeValueAsString(response));
+    }
+
+    private void handleAdminDb(HttpExchange exchange) throws IOException {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("batches", batchDao.listBatches());
+        payload.put("results", batchDao.listBatchResults(batchDao.listBatches().isEmpty() ? "" : batchDao.listBatches().get(0).getBatchId()));
+        sendJson(exchange, 200, OBJECT_MAPPER.writeValueAsString(payload));
     }
 
     private void sendJson(HttpExchange exchange, int statusCode, String payload) throws IOException {

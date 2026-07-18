@@ -4,6 +4,7 @@ com/example/inference/core/QueueBasedBatchProcessor.class
 com/example/inference/db/BatchDaoImpl.class
 com/example/inference/core/BatchProcessorService.class
 com/example/inference/resources/BatchResource.class
+com/example/inference/db/BatchResultRecord.class
 com/example/inference/db/BatchDao.class
 com/example/inference/api/OpenApiConfiguration.class
 com/example/inference/controller/InferenceController.class

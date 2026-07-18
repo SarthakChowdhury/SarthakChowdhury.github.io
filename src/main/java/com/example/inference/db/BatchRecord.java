@@ -7,46 +7,6 @@ public class BatchRecord {
     private int completed;
     private int failed;
 
-    public String getbatchId() {
-        return batchId;
-    }
-
-    public void setbatchId(String batchId) {
-        this.batchId = batchId;
-    }
-
-    public String getstatus() {
-        return status;
-    }
-
-    public void setstatus(String status) {
-        this.status = status;
-    }
-
-    public int gettotalPrompts() {
-        return totalPrompts;
-    }
-
-    public void settotalPrompts(int totalPrompts) {
-        this.totalPrompts = totalPrompts;
-    }
-
-    public int getcompleted() {
-        return completed;
-    }
-
-    public void setcompleted(int completed) {
-        this.completed = completed;
-    }
-
-    public int getfailed() {
-        return failed;
-    }
-
-    public void setfailed(int failed) {
-        this.failed = failed;
-    }
-
     public String getBatchId() {
         return batchId;
     }
