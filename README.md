@@ -1,39 +1,30 @@
-description: xdddd
-<button>click meh</button>
-## Welcome to GitHub Pages
+# Batch Inference Service
 
-You can use the [editor on GitHub](https://github.com/SarthakChowdhury/SarthakChowdhury.github.io/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+A Dropwizard-based backend for accepting large prompt batches, processing them concurrently, and tracking their status with retry and backoff behavior.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Quickstart
 
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+```bash
+mvn clean install
+java -jar target/batch-inference-service-1.0.0-SNAPSHOT.jar server config.yml
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+## API
 
-### Jekyll Themes
+### Create a batch
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/SarthakChowdhury/SarthakChowdhury.github.io/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+```bash
+curl -X POST http://localhost:8080/v1/batches \
+  -H 'Content-Type: application/json' \
+  -d '{"prompts":["hello","world","dropwizard"]}'
+```
 
-### Support or Contact
+### Check batch status
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+```bash
+curl http://localhost:8080/v1/batches/<batch-id>
+```
+
+## Concurrency model
+
+The service uses a bounded worker pool sized by config and a shared queue-like submission approach to process prompts without spawning unbounded threads. Resilience4j-style retry with exponential backoff and jitter is applied around a mock inference client that randomly simulates HTTP 429 responses.

@@ -1,0 +1,12 @@
+server:
+  applicationConnectors:
+    - type: http
+      port: 8080
+  adminConnectors:
+    - type: http
+      port: 8081
+
+maxConcurrentWorkers: 4
+maxRetries: 3
+retryInitialDelayMs: 500
+retryJitterFactor: 0.2
