@@ -7,7 +7,7 @@ public class BatchProcessorConfiguration extends Configuration {
     private int maxRetries = 3;
     private int retryInitialDelayMs = 500;
     private double retryJitterFactor = 0.2;
-    private String dbUrl = "jdbc:h2:mem:batch;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
+    private String dbUrl = "jdbc:h2:file:./.h2/batch-db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1";
     private String dbUser = "sa";
     private String dbPassword = "";
 
