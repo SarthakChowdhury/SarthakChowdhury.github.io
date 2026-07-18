@@ -6,7 +6,20 @@ server:
     - type: http
       port: 8081
 
-maxConcurrentWorkers: 4
-maxRetries: 3
+# Local default uses file-backed H2 (MODE=PostgreSQL).
+# For production Postgres (docker-compose.yml):
+#   dbUrl: jdbc:postgresql://localhost:5432/batchdb
+#   dbUser: batchuser
+#   dbPassword: batchpass
+dbUrl: jdbc:h2:file:./.h2/batch-db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+dbUser: sa
+dbPassword: ""
+
+maxConcurrentWorkers: 10
+queueCapacity: 1000
+maxRetries: 5
 retryInitialDelayMs: 500
 retryJitterFactor: 0.2
+rateLimitChance: 0.15
+mockLatencyMinMs: 100
+mockLatencyMaxMs: 300

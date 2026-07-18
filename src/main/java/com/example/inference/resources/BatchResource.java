@@ -6,9 +6,16 @@ import com.example.inference.api.CreateBatchResponse;
 import com.example.inference.core.QueueBasedBatchProcessor;
 import com.example.inference.db.BatchDao;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import java.util.Map;
 
 @Path("/v1/batches")
 @Produces(MediaType.APPLICATION_JSON)
@@ -34,9 +41,17 @@ public class BatchResource {
     public Response getBatchStatus(@PathParam("batchId") String batchId) {
         var record = batchDao.getBatch(batchId);
         if (record == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(Map.of("error", "Batch not found"))
+                    .build();
         }
-        BatchStatusResponse response = new BatchStatusResponse(record.getBatchId(), record.getStatus(), record.getTotalPrompts(), record.getCompleted(), record.getFailed());
+        BatchStatusResponse response = new BatchStatusResponse(
+                record.getBatchId(),
+                record.getStatus(),
+                record.getTotalPrompts(),
+                record.getCompleted(),
+                record.getFailed()
+        );
         return Response.ok(response).build();
     }
 }

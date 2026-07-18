@@ -32,7 +32,7 @@ public class BatchDaoImpl implements BatchDao {
         try (Connection connection = dataSource.getConnection(); PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO batches(batch_id, status, total_prompts, completed, failed) VALUES (?, ?, ?, ?, ?)")) {
             statement.setString(1, batchId);
-            statement.setString(2, "IN_PROGRESS");
+            statement.setString(2, "PENDING");
             statement.setInt(3, prompts.size());
             statement.setInt(4, 0);
             statement.setInt(5, 0);

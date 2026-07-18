@@ -57,12 +57,14 @@ public class BatchProcessorService {
                 retries++;
                 if (retries >= maxRetries) {
                     batchDao.incrementFailed(batchId);
+                    batchDao.updatePromptResult(batchId, prompt, "RATE_LIMITED", false);
                     evaluateBatchCompletion(batchId);
                     return;
                 }
                 sleepWithJitter(retries);
             } catch (Exception e) {
                 batchDao.incrementFailed(batchId);
+                batchDao.updatePromptResult(batchId, prompt, "ERROR: " + e.getMessage(), false);
                 evaluateBatchCompletion(batchId);
                 return;
             }

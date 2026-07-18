@@ -1,56 +1,96 @@
 package com.example.inference.core;
 
 import com.example.inference.db.BatchDao;
+import com.example.inference.db.BatchRecord;
 import com.example.inference.model.InferenceResult;
+import io.dropwizard.lifecycle.Managed;
+import io.github.resilience4j.core.IntervalFunction;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class QueueBasedBatchProcessor {
+public class QueueBasedBatchProcessor implements Managed {
     private final BatchDao batchDao;
     private final MockInferenceClient inferenceClient;
     private final ExecutorService workerPool;
     private final BlockingQueue<WorkItem> queue;
-    private final int maxRetries;
-    private final Duration initialBackoff;
-    private final double jitterFactor;
-    private final CountDownLatch completionLatch;
-    private volatile boolean running;
+    private final int workerCount;
+    private final Retry retry;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
-    public QueueBasedBatchProcessor(BatchDao batchDao, MockInferenceClient inferenceClient, int workerCount, int queueCapacity, Duration initialBackoff, int maxRetries, double jitterFactor) {
+    public QueueBasedBatchProcessor(
+            BatchDao batchDao,
+            MockInferenceClient inferenceClient,
+            int workerCount,
+            int queueCapacity,
+            Duration initialBackoff,
+            int maxAttempts,
+            double jitterFactor
+    ) {
         this.batchDao = batchDao;
         this.inferenceClient = inferenceClient;
-        this.workerPool = Executors.newFixedThreadPool(workerCount);
-        this.queue = new LinkedBlockingQueue<>(queueCapacity);
-        this.maxRetries = maxRetries;
-        this.initialBackoff = initialBackoff;
-        this.jitterFactor = jitterFactor;
-        this.completionLatch = new CountDownLatch(1);
-        this.running = true;
-        startWorkers();
+        this.workerCount = Math.max(1, workerCount);
+        this.workerPool = Executors.newFixedThreadPool(this.workerCount);
+        this.queue = new LinkedBlockingQueue<>(Math.max(this.workerCount, queueCapacity));
+
+        RetryConfig retryConfig = RetryConfig.custom()
+                .maxAttempts(Math.max(1, maxAttempts))
+                .intervalFunction(IntervalFunction.ofExponentialRandomBackoff(
+                        initialBackoff,
+                        2.0d,
+                        Math.max(0.0d, Math.min(1.0d, jitterFactor))
+                ))
+                .retryOnException(throwable -> throwable instanceof InferenceRateLimitException)
+                .failAfterMaxAttempts(true)
+                .build();
+        this.retry = RetryRegistry.of(retryConfig).retry("inference-retry");
     }
 
-    public void submitBatch(String batchId, List<String> prompts) {
-        for (String prompt : prompts) {
-            queue.offer(new WorkItem(batchId, prompt));
+    @Override
+    public void start() {
+        if (!running.compareAndSet(false, true)) {
+            return;
         }
-        completionLatch.countDown();
-    }
-
-    public void shutdown() {
-        running = false;
-        workerPool.shutdownNow();
-    }
-
-    private void startWorkers() {
-        for (int i = 0; i < Math.max(1, Runtime.getRuntime().availableProcessors()); i++) {
+        for (int i = 0; i < workerCount; i++) {
             workerPool.submit(this::consumeLoop);
         }
     }
 
+    @Override
+    public void stop() {
+        running.set(false);
+        workerPool.shutdownNow();
+    }
+
+    public void submitBatch(String batchId, List<String> prompts) {
+        batchDao.updateBatchStatus(batchId, "IN_PROGRESS");
+        for (String prompt : prompts) {
+            try {
+                queue.put(new WorkItem(batchId, prompt));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while enqueueing prompt for batch " + batchId, e);
+            }
+        }
+    }
+
+    /** Prefer Dropwizard Managed lifecycle stop(). */
+    @Deprecated
+    public void shutdown() {
+        stop();
+    }
+
     private void consumeLoop() {
-        while (running) {
+        while (running.get()) {
             try {
                 WorkItem item = queue.poll(250, TimeUnit.MILLISECONDS);
                 if (item == null) {
@@ -65,34 +105,26 @@ public class QueueBasedBatchProcessor {
     }
 
     private void process(WorkItem item) {
-        int retries = 0;
-        while (retries < maxRetries) {
-            try {
-                InferenceResult result = inferenceClient.infer(item.prompt());
-                batchDao.incrementCompleted(item.batchId());
-                batchDao.updatePromptResult(item.batchId(), item.prompt(), result.response(), true);
-                return;
-            } catch (InferenceRateLimitException e) {
-                retries++;
-                if (retries >= maxRetries) {
-                    batchDao.incrementFailed(item.batchId());
-                    return;
-                }
-                sleepWithJitter(retries);
-            } catch (Exception e) {
-                batchDao.incrementFailed(item.batchId());
-                return;
-            }
+        try {
+            InferenceResult result = Retry.decorateCheckedSupplier(retry, () -> inferenceClient.infer(item.prompt())).get();
+            batchDao.incrementCompleted(item.batchId());
+            batchDao.updatePromptResult(item.batchId(), item.prompt(), result.response(), true);
+            evaluateBatchCompletion(item.batchId());
+        } catch (InferenceRateLimitException e) {
+            batchDao.incrementFailed(item.batchId());
+            batchDao.updatePromptResult(item.batchId(), item.prompt(), "RATE_LIMITED: " + e.getMessage(), false);
+            evaluateBatchCompletion(item.batchId());
+        } catch (Throwable e) {
+            batchDao.incrementFailed(item.batchId());
+            batchDao.updatePromptResult(item.batchId(), item.prompt(), "ERROR: " + e.getMessage(), false);
+            evaluateBatchCompletion(item.batchId());
         }
     }
 
-    private void sleepWithJitter(int attempt) {
-        long delay = (long) (initialBackoff.toMillis() * Math.pow(2, attempt - 1));
-        long jitter = (long) (delay * jitterFactor * Math.random());
-        try {
-            Thread.sleep(delay + jitter);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+    private void evaluateBatchCompletion(String batchId) {
+        BatchRecord record = batchDao.getBatch(batchId);
+        if (record != null && record.getCompleted() + record.getFailed() >= record.getTotalPrompts()) {
+            batchDao.updateBatchStatus(batchId, record.getFailed() == 0 ? "COMPLETED" : "FAILED");
         }
     }
 

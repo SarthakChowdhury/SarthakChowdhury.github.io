@@ -4,8 +4,6 @@ import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
-import org.jdbi.v3.sqlobject.customizer.BindBean;
-import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
@@ -27,14 +25,17 @@ public class JdbiBatchDao implements BatchDao {
     @Override
     public void initialize() {
         System.out.println("[DB] Initializing schema");
-        jdbi.useExtension(Dao.class, dao -> dao.createSchema());
+        jdbi.useExtension(Dao.class, dao -> {
+            dao.createSchema();
+            dao.reconcileTerminalStatuses();
+        });
     }
 
     @Override
     public String createBatch(List<String> prompts) {
         String batchId = UUID.randomUUID().toString();
         System.out.println("[DB] Creating batch " + batchId + " with " + prompts.size() + " prompts");
-        jdbi.useExtension(Dao.class, dao -> dao.insertBatch(batchId, "IN_PROGRESS", prompts.size()));
+        jdbi.useExtension(Dao.class, dao -> dao.insertBatch(batchId, "PENDING", prompts.size()));
         System.out.println("[DB] Batch inserted: " + batchId);
         return batchId;
     }
@@ -86,6 +87,9 @@ public class JdbiBatchDao implements BatchDao {
     public interface Dao {
         @SqlUpdate("CREATE TABLE IF NOT EXISTS batches (batch_id VARCHAR(255) PRIMARY KEY, status VARCHAR(50), total_prompts INT, completed INT DEFAULT 0, failed INT DEFAULT 0); CREATE TABLE IF NOT EXISTS batch_results (batch_id VARCHAR(255), prompt VARCHAR(1000), response VARCHAR(1000), success BOOLEAN)")
         void createSchema();
+
+        @SqlUpdate("UPDATE batches SET status = CASE WHEN failed = 0 THEN 'COMPLETED' ELSE 'FAILED' END WHERE status = 'IN_PROGRESS' AND completed + failed >= total_prompts")
+        void reconcileTerminalStatuses();
 
         @SqlUpdate("INSERT INTO batches(batch_id, status, total_prompts, completed, failed) VALUES (?, ?, ?, 0, 0)")
         void insertBatch(@Bind("batchId") String batchId, @Bind("status") String status, @Bind("totalPrompts") int totalPrompts);

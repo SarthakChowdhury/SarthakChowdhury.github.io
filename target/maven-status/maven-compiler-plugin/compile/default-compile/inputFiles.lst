@@ -20,6 +20,7 @@
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/model/BatchInferenceResponse.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/model/ErrorResponse.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/model/InferenceResult.java
+/workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/resources/AdminResource.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/resources/BatchHttpHandler.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/resources/BatchResource.java
 /workspaces/SarthakChowdhury.github.io/src/main/java/com/example/inference/service/InferenceService.java

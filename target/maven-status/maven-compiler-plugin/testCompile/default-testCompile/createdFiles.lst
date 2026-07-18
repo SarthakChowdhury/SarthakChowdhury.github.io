@@ -1,5 +1,7 @@
-com/example/inference/resources/BatchHttpHandlerTest$StubHttpExchange.class
+com/example/inference/resources/AdminResourceTest$StubBatchDao.class
 com/example/inference/InferenceResourceTest.class
-com/example/inference/resources/BatchHttpHandlerTest.class
-com/example/inference/resources/BatchHttpHandlerTest$StubBatchDao.class
+com/example/inference/core/QueueBasedBatchProcessorTest.class
+com/example/inference/resources/BatchIngestionNonBlockingTest.class
 com/example/inference/core/BatchProcessorServiceTest.class
+com/example/inference/resources/AdminResourceTest.class
+com/example/inference/core/QueueBasedBatchProcessorTest$1.class

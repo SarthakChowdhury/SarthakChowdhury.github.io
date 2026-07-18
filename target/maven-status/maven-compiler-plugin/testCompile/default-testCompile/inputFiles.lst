@@ -1,3 +1,5 @@
 /workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/InferenceResourceTest.java
 /workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/core/BatchProcessorServiceTest.java
-/workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/resources/BatchHttpHandlerTest.java
+/workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/core/QueueBasedBatchProcessorTest.java
+/workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/resources/AdminResourceTest.java
+/workspaces/SarthakChowdhury.github.io/src/test/java/com/example/inference/resources/BatchIngestionNonBlockingTest.java
